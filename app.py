@@ -9,7 +9,8 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME")
 MODEL_PROVIDER = os.getenv("MODEL_PROVIDER")
-TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", 1))
+# Eliminamos la carga fija de temperatura aquí
+# TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", 1))
 
 class StatsBase(BaseModel):
     hp: int = Field(..., description="Puntos de salud del Pokémon")
@@ -37,20 +38,17 @@ class Pokemon(BaseModel):
     stats_base: StatsBase = Field(..., description="Estadísticas base del Pokémon")
     evoluciones: List[str] = Field(..., description="Lista de nombres de Pokémon en su línea evolutiva")
 
-llm = init_chat_model(
-    model=MODEL_NAME,
-    model_provider=MODEL_PROVIDER,
-    api_key=GROQ_API_KEY,
-    temperature=TEMPERATURE,
-)
-
-structured_llm = llm.with_structured_output(Pokemon)
-
 st.set_page_config(page_title="PokeGenerator | jotaefecueme", layout="wide")
-
 st.title("PokeGenerator | jotaefecueme")
 
-idea = st.text_area("Describe la idea para generar un Pokémon:", height=150, value="un pokémon que consuma fentanilo se llame paquito, que sea legendario y al menos uno de sus ataques sea CHOCOLATE PARA TODOS!")
+idea = st.text_area(
+    "Describe la idea para generar un Pokémon:", 
+    height=150, 
+    value="un pokémon que consuma fentanilo se llame paquito, que sea legendario y al menos uno de sus ataques sea CHOCOLATE PARA TODOS!"
+)
+
+# Barra para temperatura, rango típico 0-2, default 1
+temperature = st.slider("Temperatura de generación", min_value=0.0, max_value=2.0, value=1.0, step=0.1)
 
 if st.button("Generar Pokémon"):
     if not idea.strip():
@@ -58,6 +56,15 @@ if st.button("Generar Pokémon"):
     else:
         with st.spinner("Generando Pokémon..."):
             try:
+                # Inicializamos el modelo aquí con la temperatura dinámica
+                llm = init_chat_model(
+                    model=MODEL_NAME,
+                    model_provider=MODEL_PROVIDER,
+                    api_key=GROQ_API_KEY,
+                    temperature=temperature,
+                )
+                structured_llm = llm.with_structured_output(Pokemon)
+                
                 resultado = structured_llm.invoke(
                     f"Genera un Pokémon basado en esta idea: {idea}. "
                     "Rellena todos los campos del modelo de forma temática. Sé creativo, "
