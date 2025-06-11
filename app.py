@@ -6,6 +6,7 @@ from langchain.chat_models import init_chat_model
 import requests
 import time
 import threading
+import time
 import concurrent.futures
 
 load_dotenv()
@@ -43,15 +44,15 @@ class Pokemon(BaseModel):
     evoluciones: list[str] = Field(..., description="Lista de nombres de Pokémon en su línea evolutiva")
     prompt_imagen: str = Field(
         ...,
-        description=(
-            "Optimized and highly detailed text prompt for an image generation model to create an accurate and vivid "
-            "illustration of the Pokémon. The prompt must include clear and precise descriptions of all relevant "
-            "visual attributes such as color(s), shape, size, texture, posture, distinctive markings, style, and any "
-            "other physical features that contribute to a faithful and realistic representation. "
-            "Include environmental or thematic elements if needed to enrich the image. "
-            "The description must be comprehensive yet concise, synthesizing all necessary details. "
-            "IMPORTANT!!! This text must be written in English."
-)
+            description=(
+            "A single, clear, and concise sentence containing only the most important keywords describing the Pokémon's physical appearance: "
+            "color, shape, size, posture, and distinctive features. "
+            "Do not include art style, environment, or extra details. "
+            "This description will be used to generate the Pokémon image. "
+            "Must be written in English."
+            )
+
+
     )
 
 def generar_pokemon(idea: str, temperature: float, max_retries: int = 3, delay: float = 2.0) -> Pokemon:
@@ -65,11 +66,14 @@ def generar_pokemon(idea: str, temperature: float, max_retries: int = 3, delay: 
 
     prompt = (
         f"Genera un Pokémon basado en esta idea: {idea}. "
-        "Devuelve únicamente un objeto JSON que cumpla exactamente con el esquema del modelo `Pokemon`, "
-        "sin añadir etiquetas, texto decorativo, explicaciones ni formato adicional. "
-        "No añadas comillas triples, ni texto extra, ni explicaciones. Solo JSON puro. "
-        "Rellena todos los campos de forma temática, original y coherente con el mundo Pokémon. "
+        "Devuelve únicamente un objeto JSON que cumpla exactamente con el esquema del modelo `Pokemon`. "
+        "Todos los campos deben estar en español, excepto el campo 'prompt_imagen', "
+        "que debe contener un texto detallado y optimizado para un modelo de generación de imágenes, "
+        "escrito en inglés, que describa con precisión y detalle el aspecto visual del Pokémon incluyendo color, forma, tamaño, textura, postura y cualquier característica distintiva. "
+        "No añadas etiquetas, texto decorativo, explicaciones ni formato adicional. "
+        "No uses comillas triples ni texto extra. Solo JSON puro."
     )
+
 
     last_exception = None
     for _ in range(max_retries):
