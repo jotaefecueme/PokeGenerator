@@ -12,8 +12,8 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME")
 MODEL_PROVIDER = os.getenv("MODEL_PROVIDER")
-
 IMG_API_URL = "https://python-quality-fully.ngrok-free.app/generate"
+
 
 class StatsBase(BaseModel):
     hp: int = Field(..., description="Puntos de salud del Pokémon")
@@ -23,38 +23,54 @@ class StatsBase(BaseModel):
     special_defense: int = Field(..., description="Defensa especial base del Pokémon")
     speed: int = Field(..., description="Velocidad base del Pokémon")
 
+
 class Pokemon(BaseModel):
     nombre: str = Field(..., description="Nombre del Pokémon")
-    numero_pokedex: int = Field(..., description="Número oficial del Pokémon en la Pokédex")
+    numero_pokedex: int = Field(
+        ..., description="Número oficial del Pokémon en la Pokédex"
+    )
     categoria: str = Field(..., description="Categoría del Pokémon")
     legendario: bool = Field(..., description="Indica si es un Pokémon legendario")
-    region: str = Field(..., description="Región a la que pertenece el Pokémon, puedes inventarte una nueva región o usar una de las ya existentes.")
+    region: str = Field(
+        ...,
+        description="Región a la que pertenece el Pokémon, puedes inventarte una nueva región o usar una de las ya existentes.",
+    )
     color: str = Field(..., description="Color dominante del Pokémon")
-    descripcion_pokedex: str = Field(..., description="Descripción breve del Pokémon según la Pokédex")
-    descripcion_grafica: str = Field(..., description="Descripción visual del aspecto del Pokémon")
+    descripcion_pokedex: str = Field(
+        ..., description="Descripción breve del Pokémon según la Pokédex"
+    )
+    descripcion_grafica: str = Field(
+        ..., description="Descripción visual del aspecto del Pokémon"
+    )
     tipo: list[str] = Field(..., description="Lista de tipos del Pokémon")
     altura_m: float = Field(..., description="Altura del Pokémon en metros")
     peso_kg: float = Field(..., description="Peso del Pokémon en kilogramos")
     habilidad: str = Field(..., description="Habilidad principal del Pokémon")
-    descripcion_habilidad: str = Field(..., description="Explicación de lo que hace la habilidad")
-    ataques: list[str] = Field(..., description="Lista de ataques característicos del Pokémon")
+    descripcion_habilidad: str = Field(
+        ..., description="Explicación de lo que hace la habilidad"
+    )
+    ataques: list[str] = Field(
+        ..., description="Lista de ataques característicos del Pokémon"
+    )
     stats_base: StatsBase = Field(..., description="Estadísticas base del Pokémon")
-    evoluciones: list[str] = Field(..., description="Lista de nombres de Pokémon en su línea evolutiva")
+    evoluciones: list[str] = Field(
+        ..., description="Lista de nombres de Pokémon en su línea evolutiva"
+    )
     prompt_imagen: str = Field(
         ...,
-               description = (
-        "A single, clear, and concise sentence containing only the most important keywords describing the Pokémon's physical appearance: "
-        "color, shape, and distinctive features. "
-        "Do not include art style, environment, or extra details. "
-        "This description will be used to generate the Pokémon image. "
-        "Must be written in English."
+        description=(
+            "A single, clear, and concise sentence containing only the most important keywords describing the Pokémon's physical appearance: "
+            "color, shape, and distinctive features. "
+            "Do not include art style, environment, or extra details. "
+            "This description will be used to generate the Pokémon image. "
+            "Must be written in English."
+        ),
     )
 
 
-
-    )
-
-def generar_pokemon(idea: str, temperature: float, max_retries: int = 3, delay: float = 2.0) -> Pokemon:
+def generar_pokemon(
+    idea: str, temperature: float, max_retries: int = 3, delay: float = 2.0
+) -> Pokemon:
     llm = init_chat_model(
         model=MODEL_NAME,
         model_provider=MODEL_PROVIDER,
@@ -65,7 +81,7 @@ def generar_pokemon(idea: str, temperature: float, max_retries: int = 3, delay: 
 
     prompt = (
         f"Genera un Pokémon basado en esta idea: {idea}. "
-        "Devuelve únicamente un objeto JSON que cumpla exactamente con el esquema del modelo `Pokemon`. "
+        "Devuelve únicamente un objeto JSON que cumpla exactamente con el esquema del modelo Pokemon. "
         "Todos los campos deben estar en español, excepto el campo 'prompt_imagen', "
         "que debe contener un texto detallado y optimizado para un modelo de generación de imágenes, "
         "escrito en inglés, que describa con precisión y detalle el aspecto visual del Pokémon incluyendo color, forma, tamaño, textura, postura y cualquier característica distintiva. "
@@ -73,22 +89,20 @@ def generar_pokemon(idea: str, temperature: float, max_retries: int = 3, delay: 
         "No uses comillas triples ni texto extra. Solo JSON puro."
     )
 
-
     last_exception = None
     for _ in range(max_retries):
         try:
             resultado = structured_llm.invoke(prompt)
-            pokemon = Pokemon.model_validate(resultado)
-            return pokemon
-        except ValidationError as ve:
-            last_exception = ve
-            time.sleep(delay)
+            return Pokemon.model_validate(resultado)
         except Exception as e:
             last_exception = e
             time.sleep(delay)
     raise last_exception
 
-def generar_pokemon_desde_prompt_visual(prompt_visual: str, temperature: float = 0.6) -> Pokemon:
+
+def generar_pokemon_desde_prompt_visual(
+    prompt_visual: str, temperature: float = 0.6
+) -> Pokemon:
     llm = init_chat_model(
         model=MODEL_NAME,
         model_provider=MODEL_PROVIDER,
@@ -98,9 +112,9 @@ def generar_pokemon_desde_prompt_visual(prompt_visual: str, temperature: float =
     structured_llm = llm.with_structured_output(Pokemon)
 
     prompt = (
-        f"Basándote en la siguiente descripción visual en inglés de un Pokémon: \"{prompt_visual}\", "
+        f'Basándote en la siguiente descripción visual en inglés de un Pokémon: "{prompt_visual}", '
         "genera todos los campos de un objeto Pokémon completo en JSON, que siga estrictamente el siguiente esquema: "
-        "`Pokemon` como está definido, en español excepto el campo `prompt_imagen` que se mantiene en inglés. "
+        "Pokemon como está definido, en español excepto el campo prompt_imagen que se mantiene en inglés. "
         "Debes inferir nombre, tipo, ataques, habilidades, etc., todo desde la descripción visual. "
         "El resultado debe ser solo un JSON válido, sin explicaciones, decoraciones ni formato adicional."
     )
@@ -108,21 +122,27 @@ def generar_pokemon_desde_prompt_visual(prompt_visual: str, temperature: float =
     resultado = structured_llm.invoke(prompt)
     return Pokemon.model_validate(resultado)
 
+
 def generar_imagen(prompt: str) -> list[str]:
     payload = {"prompt": prompt}
     response = requests.post(IMG_API_URL, json=payload, timeout=60)
     if response.status_code == 200:
-        data = response.json()
-        return data.get("images", [])
+        return response.json().get("images", [])
     else:
-        raise Exception(f"Error al generar imagen: {response.status_code} {response.text}")
+        raise Exception(
+            f"Error al generar imagen: {response.status_code} {response.text}"
+        )
+
 
 st.set_page_config(page_title="PokeGenerator | jotaefecueme", layout="wide")
+st.title("PokeGenerator | jotaefecueme")
 
 st.markdown(
     """
     <style>
-    /* Fondo degradado suave */
+    /* ==============================
+       ESTILO GENERAL DE LA APP
+    ============================== */
     .main {
         background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
         color: #f0f0f0;
@@ -130,7 +150,9 @@ st.markdown(
         padding: 1.5rem 2rem;
     }
 
-    /* Encabezado principal */
+    /* ==============================
+       TÍTULO PRINCIPAL
+    ============================== */
     .css-1v3fvcr h1 {
         font-size: 3rem;
         font-weight: 900;
@@ -140,7 +162,9 @@ st.markdown(
         margin-bottom: 1rem;
     }
 
-    /* Área de texto para idea */
+    /* ==============================
+       TEXTAREA DE IDEA
+    ============================== */
     textarea {
         background-color: #121212;
         border: 2px solid #ffde59;
@@ -158,7 +182,9 @@ st.markdown(
         box-shadow: 0 0 15px #ffd700cc;
     }
 
-    /* Botones */
+    /* ==============================
+       BOTONES
+    ============================== */
     button[kind="primary"] {
         background-color: #ffde59 !important;
         color: #121212 !important;
@@ -173,13 +199,17 @@ st.markdown(
         color: #111 !important;
     }
 
-    /* Slider */
+    /* ==============================
+       SLIDER
+    ============================== */
     .stSlider > div {
         color: #ffde59;
         font-weight: 700;
     }
 
-    /* JSON viewer box */
+    /* ==============================
+       JSON VISUALIZER
+    ============================== */
     .stJson {
         background: rgba(255, 222, 89, 0.15);
         border-radius: 15px;
@@ -191,7 +221,9 @@ st.markdown(
         box-shadow: inset 0 0 10px #ffde59aa;
     }
 
-    /* Imagenes */
+    /* ==============================
+       IMÁGENES
+    ============================== */
     .stImage > img {
         border-radius: 20px;
         box-shadow: 0 8px 15px rgba(255, 222, 89, 0.7);
@@ -203,7 +235,9 @@ st.markdown(
         box-shadow: 0 12px 25px rgba(255, 222, 89, 0.9);
     }
 
-    /* Warning y Error */
+    /* ==============================
+       ALERTAS
+    ============================== */
     .stAlert {
         border-radius: 15px;
         padding: 1rem;
@@ -220,7 +254,9 @@ st.markdown(
         white-space: pre-wrap;
     }
 
-    /* Columnas más amplias */
+    /* ==============================
+       COLUMNA LAYOUT
+    ============================== */
     [data-testid="stColumns"] > div {
         padding: 0 1rem;
     }
@@ -229,117 +265,84 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("PokeGenerator | jotaefecueme")
-
-idea = st.text_area(
-    "Describe el Pokémon que quieres generar, puedes dar todos los detalles que quieras.",
-    height=68,
-    value="un pokémon que consuma fentanilo se llame Paquito, que sea legendario y al menos uno de sus ataques sea CHOCOLATE PARA TODOS! y su region sea Españita"
-)
+idea = st.text_area("Describe el Pokémon que quieres generar:", height=70)
 
 if "pokemon" not in st.session_state:
     st.session_state.pokemon = None
 if "error" not in st.session_state:
     st.session_state.error = None
-if "last_idea" not in st.session_state:
-    st.session_state.last_idea = ""
-if "last_temp" not in st.session_state:
-    st.session_state.last_temp = 0.6
 if "imagenes" not in st.session_state:
     st.session_state.imagenes = []
+if "last_temp" not in st.session_state:
+    st.session_state.last_temp = 0.6
 
-if not idea.strip():
-    st.warning("Introduce una idea para generar el Pokémon.")
-    disabled = True
-else:
-    disabled = False
+if st.button("Generar Pokémon", disabled=not idea.strip()):
+    with st.spinner("Generando Pokémon..."):
+        try:
+            pokemon = generar_pokemon(idea, st.session_state.last_temp)
+            st.session_state.pokemon = pokemon.model_dump()
+            st.session_state.error = None
+            st.session_state.imagenes = []
+        except ValidationError as ve:
+            st.session_state.error = f"Error de validación:\n{ve}"
+            st.session_state.pokemon = None
+        except Exception as e:
+            st.session_state.error = f"Error generando Pokémon:\n{e}"
+            st.session_state.pokemon = None
 
-    if st.button("Generar Pokémon", disabled=False):
-        with st.spinner("Generando Pokémon..."):
-            try:
-                pokemon = generar_pokemon(idea, st.session_state.last_temp)
-                st.session_state.pokemon = pokemon.model_dump()
-                st.session_state.error = None
-                st.session_state.imagenes = []
-                st.session_state.last_idea = idea
-            except ValidationError as ve:
-                st.session_state.error = f"Error de validación del Pokémon generado:\n{ve}"
-                st.session_state.pokemon = None
-            except Exception as e:
-                st.session_state.error = f"Error generando Pokémon:\n{e}"
-                st.session_state.pokemon = None
-
-if st.session_state.pokemon is not None:
+if st.session_state.pokemon:
     col1, col2 = st.columns(2)
-
     with col1:
         st.subheader("Datos generados del Pokémon:")
-        st.markdown("**Nivel de fantasía:**")
-        col_slider, _ = st.columns([2, 1])  
-        with col_slider:
-            nivel_fantasia = st.slider(
-                label="slider_nivel_fantasia",
-                min_value=0.0,
-                max_value=1.0,
-                value=st.session_state.last_temp,
-                step=0.01,
-                label_visibility="collapsed",
-            )
-
-        st.session_state.last_temp = nivel_fantasia
-
+        st.session_state.last_temp = st.slider(
+            "Nivel de fantasía", 0.0, 1.0, st.session_state.last_temp, 0.01
+        )
         st.json(st.session_state.pokemon)
 
     with col2:
-        st.subheader("Imágenes generadas del Pokémon:")
-
+        st.subheader("Generar imagenes del Pokémon:")
         prompt_editado = st.text_area(
-            "Prompt para generar la imagen:",
+            "Prompt para imagen (funciona mejor en inglés):",
             value=st.session_state.pokemon.get("prompt_imagen", ""),
             height=100,
         )
-
         st.session_state.pokemon["prompt_imagen"] = prompt_editado
 
+        if st.button("Regenerar datos del pokémon a partir del prompt de arriba (hay que clickar 2 veces D:)"):
+            with st.spinner("Regenerando Pokémon..."):
+                try:
+                    st.session_state.pokemon["prompt_imagen"] = prompt_editado
 
-        if st.button("Generar imagenes", disabled=(not st.session_state.pokemon)):
-            try:
-                descripcion_visual = st.session_state.pokemon['prompt_imagen']
-                st.session_state.imagenes = []
-                st.session_state.error = None
-
-                with st.spinner("Regenerando Pokémon desde la descripción visual..."):
-                    nuevo_pokemon = generar_pokemon_desde_prompt_visual(descripcion_visual, st.session_state.last_temp)
-                    st.session_state.pokemon = nuevo_pokemon.model_dump()
-
-                progress_bar = st.progress(0)
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(generar_imagen, descripcion_visual)
-                    for i in range(140):
-                        time.sleep(0.1)
-                        progress_bar.progress((i + 1) / 140)
-                        if future.done():
-                            break
-                    progress_bar.progress(1.0)
-
-                    imagenes = future.result()
-                    st.session_state.imagenes = imagenes
-
-            except Exception as e:
-                mensaje = (
-                    "AH! AH! AH!\n"
-                    "¡NO HAS DICHO LA PALABRA MÁGICA!\n\n"
-                    "El servicio de generación de imágenes está desactivado -> avisa a jotaefecueme\n\n"
-                ) * 10
-                st.session_state.error = mensaje
+                    nuevo = generar_pokemon_desde_prompt_visual(
+                        prompt_editado, st.session_state.last_temp
+                    )
+                    nuevo_dict = nuevo.model_dump()
+                    nuevo_dict["prompt_imagen"] = prompt_editado
+                    st.session_state.pokemon = nuevo_dict
+                    st.session_state.error = None
+                except Exception as e:
+                    st.session_state.error = f"Error en regeneración de datos:\n{e}"
 
 
-        if st.session_state.get("error"):
-            st.error(st.session_state.error)
+ 
+        if st.button("Generar imágenes basadas en el prompt de arriba"):
+            with st.spinner("Generando imágenes... (tarda unos 15 segundos)"):
+                try:
+                    st.session_state.imagenes = generar_imagen(prompt_editado)
+                except Exception as e:
+                    st.session_state.error = (
+                        "¡NO HAS DICHO LA PALABRA MÁGICA!\n\n"
+                        f"GPU apagada -> avisa a jotaefecueme <3:\n{e}"
+                    )
+
 
         if st.session_state.imagenes:
             for i in range(0, len(st.session_state.imagenes), 2):
                 cols = st.columns(2)
-                for j, img_b64 in enumerate(st.session_state.imagenes[i:i+2]):
-                    img_data_url = f"data:image/png;base64,{img_b64}"
-                    cols[j].image(img_data_url, use_container_width=True)
+                for j, img_b64 in enumerate(st.session_state.imagenes[i : i + 2]):
+                    cols[j].image(
+                        f"data:image/png;base64,{img_b64}", use_container_width =True
+                    )
+
+if st.session_state.error:
+    st.error(st.session_state.error)
