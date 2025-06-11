@@ -9,8 +9,6 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME")
 MODEL_PROVIDER = os.getenv("MODEL_PROVIDER")
-# Eliminamos la carga fija de temperatura aquí
-# TEMPERATURE = float(os.getenv("MODEL_TEMPERATURE", 1))
 
 class StatsBase(BaseModel):
     hp: int = Field(..., description="Puntos de salud del Pokémon")
@@ -47,7 +45,6 @@ idea = st.text_area(
     value="un pokémon que consuma fentanilo se llame paquito, que sea legendario y al menos uno de sus ataques sea CHOCOLATE PARA TODOS!"
 )
 
-# Barra para temperatura, rango típico 0-2, default 1
 temperature = st.slider("Temperatura de generación", min_value=0.0, max_value=2.0, value=1.0, step=0.1)
 
 if st.button("Generar Pokémon"):
@@ -56,7 +53,6 @@ if st.button("Generar Pokémon"):
     else:
         with st.spinner("Generando Pokémon..."):
             try:
-                # Inicializamos el modelo aquí con la temperatura dinámica
                 llm = init_chat_model(
                     model=MODEL_NAME,
                     model_provider=MODEL_PROVIDER,
