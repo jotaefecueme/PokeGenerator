@@ -5,8 +5,6 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 import requests
 import time
-import threading
-import time
 import concurrent.futures
 
 load_dotenv()
@@ -44,13 +42,14 @@ class Pokemon(BaseModel):
     evoluciones: list[str] = Field(..., description="Lista de nombres de Pokémon en su línea evolutiva")
     prompt_imagen: str = Field(
         ...,
-            description=(
-            "A single, clear, and concise sentence containing only the most important keywords describing the Pokémon's physical appearance: "
-            "color, shape, size, posture, and distinctive features. "
-            "Do not include art style, environment, or extra details. "
-            "This description will be used to generate the Pokémon image. "
-            "Must be written in English."
-            )
+               description = (
+        "A single, clear, and concise sentence containing only the most important keywords describing the Pokémon's physical appearance: "
+        "color, shape, and distinctive features. "
+        "Do not include art style, environment, or extra details. "
+        "This description will be used to generate the Pokémon image. "
+        "Must be written in English."
+    )
+
 
 
     )
@@ -88,6 +87,26 @@ def generar_pokemon(idea: str, temperature: float, max_retries: int = 3, delay: 
             last_exception = e
             time.sleep(delay)
     raise last_exception
+
+def generar_pokemon_desde_prompt_visual(prompt_visual: str, temperature: float = 0.6) -> Pokemon:
+    llm = init_chat_model(
+        model=MODEL_NAME,
+        model_provider=MODEL_PROVIDER,
+        api_key=GROQ_API_KEY,
+        temperature=temperature,
+    )
+    structured_llm = llm.with_structured_output(Pokemon)
+
+    prompt = (
+        f"Basándote en la siguiente descripción visual en inglés de un Pokémon: \"{prompt_visual}\", "
+        "genera todos los campos de un objeto Pokémon completo en JSON, que siga estrictamente el siguiente esquema: "
+        "`Pokemon` como está definido, en español excepto el campo `prompt_imagen` que se mantiene en inglés. "
+        "Debes inferir nombre, tipo, ataques, habilidades, etc., todo desde la descripción visual. "
+        "El resultado debe ser solo un JSON válido, sin explicaciones, decoraciones ni formato adicional."
+    )
+
+    resultado = structured_llm.invoke(prompt)
+    return Pokemon.model_validate(resultado)
 
 def generar_imagen(prompt: str) -> list[str]:
     payload = {"prompt": prompt}
@@ -274,23 +293,33 @@ if st.session_state.pokemon is not None:
     with col2:
         st.subheader("Imágenes generadas del Pokémon:")
 
+        prompt_editado = st.text_area(
+            "Prompt para generar la imagen:",
+            value=st.session_state.pokemon.get("prompt_imagen", ""),
+            height=100,
+        )
+
+        st.session_state.pokemon["prompt_imagen"] = prompt_editado
+
+
         if st.button("Generar imagenes", disabled=(not st.session_state.pokemon)):
             try:
                 descripcion_visual = st.session_state.pokemon['prompt_imagen']
                 st.session_state.imagenes = []
                 st.session_state.error = None
 
-                progress_bar = st.progress(0)
+                with st.spinner("Regenerando Pokémon desde la descripción visual..."):
+                    nuevo_pokemon = generar_pokemon_desde_prompt_visual(descripcion_visual, st.session_state.last_temp)
+                    st.session_state.pokemon = nuevo_pokemon.model_dump()
 
+                progress_bar = st.progress(0)
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(generar_imagen, descripcion_visual)
-
-                    for i in range(140):  
+                    for i in range(140):
                         time.sleep(0.1)
                         progress_bar.progress((i + 1) / 140)
                         if future.done():
                             break
-
                     progress_bar.progress(1.0)
 
                     imagenes = future.result()
@@ -303,6 +332,7 @@ if st.session_state.pokemon is not None:
                     "El servicio de generación de imágenes está desactivado -> avisa a jotaefecueme\n\n"
                 ) * 10
                 st.session_state.error = mensaje
+
 
         if st.session_state.get("error"):
             st.error(st.session_state.error)
